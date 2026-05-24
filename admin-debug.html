@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamuna LTD | Admin Debug Version</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .login-box, .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .login-box { max-width: 450px; margin: 100px auto; text-align: center; }
+        .logo-icon {
+            width: 70px; height: 70px;
+            background: linear-gradient(135deg, #1a4d8c, #0e3a6b);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+        }
+        .logo-icon i { font-size: 35px; color: white; }
+        h1 { color: #1a4d8c; margin-bottom: 20px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        button {
+            background: #1a4d8c;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        .btn-danger { background: #e74c3c; }
+        .upload-area {
+            border: 2px dashed #1a4d8c;
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-radius: 15px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #1a4d8c, #0e3a6b);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .doc-list { max-height: 500px; overflow-y: auto; }
+        .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hidden { display: none; }
+        .error-msg { color: #e74c3c; margin-top: 15px; }
+        .debug-box {
+            background: #2c3e50;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow: auto;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { display: flex; align-items: center; gap: 15px; }
+        .logo-icon-small {
+            width: 50px; height: 50px;
+            background: linear-gradient(135deg, #1a4d8c, #0e3a6b);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginSection" class="login-box">
+            <div class="logo-icon"><i class="fas fa-shield-alt"></i></div>
+            <h1>Admin Login (Debug)</h1>
+            <input type="password" id="passwordInput" placeholder="Enter Admin Password">
+            <button id="loginButton">Login</button>
+            <div id="errorMsg" class="error-msg"></div>
+        </div>
+
+        <div id="dashboardSection" class="hidden">
+            <div class="header">
+                <div class="logo">
+                    <div class="logo-icon-small"><i class="fas fa-shield-alt"></i></div>
+                    <div><h1>Jamuna LTD</h1><p>Paitka, Dhanbari, Tangail</p></div>
+                </div>
+                <button id="logoutButton" class="btn-danger">Logout</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card"><i class="fas fa-file-alt"></i><div class="stat-number" id="totalDocs">0</div><div>Documents</div></div>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Upload Document</h2>
+                <input type="text" id="docTitle" placeholder="Document Title *">
+                <input type="date" id="issueDate">
+                <select id="docCategory">
+                    <option>Invoice</option><option>Certificate</option><option>Report</option><option>Legal</option>
+                </select>
+                <textarea id="docDesc" rows="2" placeholder="Notes"></textarea>
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i> Click to upload (PDF, JPG, PNG)
+                </div>
+                <input type="file" id="docFile" accept=".pdf,.jpg,.jpeg,.png" style="display: none;">
+                <button id="uploadBtn">Upload & Generate QR</button>
+                
+                <!-- Debug Console -->
+                <div class="debug-box" id="debugConsole">
+                    [Debug] Ready. Waiting for action...
+                </div>
+            </div>
+
+            <div class="dashboard-card" style="margin-top: 20px;">
+                <h2>Document Manager</h2>
+                <div id="documentsList" class="doc-list">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
+            
+            const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            function debugLog(msg) {
+                const consoleDiv = document.getElementById('debugConsole');
+                const timestamp = new Date().toLocaleTimeString();
+                consoleDiv.innerHTML += `\n[${timestamp}] ${msg}`;
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                console.log(msg);
+            }
+            
+            debugLog('Supabase initialized');
+            
+            // Login
+            window.doLogin = function() {
+                const password = document.getElementById('passwordInput').value;
+                debugLog('Login attempted');
+                if (password === 'Jamuna2025') {
+                    debugLog('Login successful');
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    loadDocuments();
+                    updateStats();
+                    setupUpload();
+                } else {
+                    debugLog('Login failed: wrong password');
+                    document.getElementById('errorMsg').innerHTML = '❌ Wrong password';
+                }
+            };
+            
+            window.doLogout = function() {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+                document.getElementById('passwordInput').value = '';
+            };
+            
+            async function loadDocuments() {
+                debugLog('Loading documents...');
+                const { data, error } = await sb.from('documents').select('*').order('uploaded_at', { ascending: false });
+                if (error) {
+                    debugLog('Error loading: ' + error.message);
+                    return;
+                }
+                debugLog('Loaded ' + (data ? data.length : 0) + ' documents');
+                const container = document.getElementById('documentsList');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p>No documents yet.</p>';
+                    return;
+                }
+                container.innerHTML = data.map(doc => `
+                    <div class="doc-item">
+                        <div><strong>${escapeHtml(doc.title)}</strong><br><small>ID: ${doc.doc_id}</small></div>
+                        <button onclick="copyLink('${doc.doc_id}')" style="width:auto;padding:5px10px;">Copy Link</button>
+                    </div>
+                `).join('');
+            }
+            
+            async function updateStats() {
+                const { data } = await sb.from('documents').select('*');
+                document.getElementById('totalDocs').innerText = data ? data.length : 0;
+            }
+            
+            window.copyLink = function(id) {
+                const link = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${id}`;
+                navigator.clipboard.writeText(link);
+                debugLog('Copied link for: ' + id);
+            };
+            
+            function generateDocId() {
+                return 'JAM-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+            }
+            
+            function setupUpload() {
+                document.getElementById('uploadArea').onclick = () => document.getElementById('docFile').click();
+                document.getElementById('uploadBtn').onclick = () => {
+                    const title = document.getElementById('docTitle').value;
+                    const issueDate = document.getElementById('issueDate').value;
+                    const category = document.getElementById('docCategory').value;
+                    const description = document.getElementById('docDesc').value;
+                    const file = document.getElementById('docFile').files[0];
+                    
+                    debugLog('Upload button clicked');
+                    debugLog('Title: ' + title);
+                    debugLog('File: ' + (file ? file.name : 'none'));
+                    
+                    if (!title || !issueDate || !file) {
+                        debugLog('ERROR: Missing fields');
+                        alert('Please fill all fields');
+                        return;
+                    }
+                    
+                    debugLog('Reading file...');
+                    const reader = new FileReader();
+                    reader.onload = async function(e) {
+                        const docId = generateDocId();
+                        debugLog('File read complete. Size: ' + e.target.result.length + ' chars');
+                        debugLog('Inserting into Supabase...');
+                        
+                        const { data, error } = await sb.from('documents').insert({
+                            doc_id: docId,
+                            title: title,
+                            issue_date: issueDate,
+                            category: category,
+                            description: description,
+                            file_data: e.target.result
+                        });
+                        
+                        if (error) {
+                            debugLog('❌ SUPABASE ERROR: ' + JSON.stringify(error));
+                            alert('Upload failed: ' + error.message);
+                            return;
+                        }
+                        
+                        debugLog('✅ Insert successful! Document ID: ' + docId);
+                        
+                        // Generate QR
+                        debugLog('Generating QR code...');
+                        const tempDiv = document.createElement('div');
+                        const verifyUrl = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${docId}`;
+                        new QRCode(tempDiv, { text: verifyUrl, width: 150, height: 150 });
+                        
+                        setTimeout(() => {
+                            const qrImg = tempDiv.querySelector('img');
+                            debugLog('QR code generated');
+                            
+                            const html = `<!DOCTYPE html>
+                            <html>
+                            <head><title>${title} - Jamuna LTD</title></head>
+                            <body style="text-align:center;padding:50px;font-family:Arial">
+                                <h1>Jamuna LTD</h1>
+                                <h2>${escapeHtml(title)}</h2>
+                                <p><strong>ID:</strong> ${docId}</p>
+                                <p><strong>Date:</strong> ${issueDate}</p>
+                                ${qrImg ? `<div><img src="${qrImg.src}"></div>` : ''}
+                                <p><strong>Verify at:</strong><br>${verifyUrl}</p>
+                            </body>
+                            </html>`;
+                            
+                            const blob = new Blob([html], { type: 'text/html' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_VERIFIED.html`;
+                            a.click();
+                            debugLog('✅ QR document downloaded!');
+                            
+                            alert('Upload successful! Document ID: ' + docId);
+                            
+                            document.getElementById('docTitle').value = '';
+                            document.getElementById('issueDate').value = '';
+                            document.getElementById('docDesc').value = '';
+                            document.getElementById('docFile').value = '';
+                            loadDocuments();
+                            updateStats();
+                        }, 200);
+                    };
+                    reader.onerror = function(err) {
+                        debugLog('File read error: ' + err);
+                        alert('File read error');
+                    };
+                    reader.readAsDataURL(file);
+                };
+            }
+            
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;');
+                });
+            }
+            
+            document.getElementById('loginButton').onclick = () => window.doLogin();
+            document.getElementById('logoutButton').onclick = () => window.doLogout();
+        })();
+    </script>
+</body>
+</html>
