@@ -129,7 +129,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- LOGIN SECTION -->
         <div id="loginSection" class="login-box">
             <div class="logo-icon"><i class="fas fa-shield-alt"></i></div>
             <h1>Admin Login</h1>
@@ -139,7 +138,6 @@
             <div id="errorMsg" class="error-msg"></div>
         </div>
 
-        <!-- DASHBOARD SECTION -->
         <div id="dashboardSection" class="hidden">
             <div class="header">
                 <div class="logo">
@@ -191,211 +189,194 @@
     </div>
 
     <script>
-        // ============================================
-        // SUPABASE CONFIGURATION - FIXED (no duplicate)
-        // ============================================
-        const SB_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
-        const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
-        
-        const sbClient = supabaseJs.createClient(SB_URL, SB_ANON_KEY);
-        
-        // ============================================
-        // LOGIN FUNCTIONS
-        // ============================================
-        function doLogin() {
-            const password = document.getElementById('passwordInput').value;
-            if (password === 'Jamuna2025') {
-                document.getElementById('loginSection').classList.add('hidden');
-                document.getElementById('dashboardSection').classList.remove('hidden');
-                document.getElementById('errorMsg').innerHTML = '';
-                loadDocuments();
-                updateStats();
-                setupUpload();
-            } else {
-                document.getElementById('errorMsg').innerHTML = '❌ Incorrect password. Try: Jamuna2025';
-            }
-        }
-        
-        function doLogout() {
-            document.getElementById('loginSection').classList.remove('hidden');
-            document.getElementById('dashboardSection').classList.add('hidden');
-            document.getElementById('passwordInput').value = '';
-        }
-        
-        document.getElementById('loginButton').onclick = doLogin;
-        document.getElementById('logoutButton').onclick = doLogout;
-        document.getElementById('passwordInput').onkeypress = (e) => { if (e.key === 'Enter') doLogin(); };
-        
-        // ============================================
-        // DATABASE FUNCTIONS
-        // ============================================
-        async function loadDocuments() {
-            const { data, error } = await sbClient
-                .from('documents')
-                .select('*')
-                .order('uploaded_at', { ascending: false });
+        // FIXED: Use a self-executing function to avoid variable conflicts
+        (function() {
+            const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
             
-            const container = document.getElementById('documentsList');
+            const _supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            if (error) {
-                container.innerHTML = '<p>Error loading documents: ' + error.message + '</p>';
-                return;
-            }
+            // Expose needed functions globally
+            window._sb = _supabase;
             
-            if (!data || data.length === 0) {
-                container.innerHTML = '<p>No documents yet. Upload your first document above.</p>';
-                return;
-            }
+            // Login
+            window.doLogin = function() {
+                const password = document.getElementById('passwordInput').value;
+                if (password === 'Jamuna2025') {
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('dashboardSection').classList.remove('hidden');
+                    document.getElementById('errorMsg').innerHTML = '';
+                    loadDocuments();
+                    updateStats();
+                    setupUpload();
+                } else {
+                    document.getElementById('errorMsg').innerHTML = '❌ Incorrect password. Try: Jamuna2025';
+                }
+            };
             
-            container.innerHTML = data.map(doc => `
-                <div class="doc-item">
-                    <div style="flex: 1;">
-                        <strong><i class="fas fa-file-pdf"></i> ${escapeHtml(doc.title)}</strong><br>
-                        <small>ID: ${escapeHtml(doc.doc_id)} | Issued: ${escapeHtml(doc.issue_date)} | Verified: ${doc.verification_count || 0} times</small>
-                    </div>
-                    <div class="doc-actions">
-                        <button onclick="copyLink('${doc.doc_id}')" class="btn-sm"><i class="fas fa-copy"></i> Copy Link</button>
-                        <button onclick="deleteDocument('${doc.doc_id}')" class="btn-danger"><i class="fas fa-trash"></i> Delete</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        async function updateStats() {
-            const { data: docs } = await sbClient.from('documents').select('*');
-            document.getElementById('totalDocs').innerText = docs ? docs.length : 0;
+            window.doLogout = function() {
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+                document.getElementById('passwordInput').value = '';
+            };
             
-            const { data: verifications } = await sbClient.from('verifications').select('*');
-            document.getElementById('totalVerifications').innerText = verifications ? verifications.length : 0;
-        }
-        
-        window.copyLink = function(id) {
-            const link = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${id}`;
-            navigator.clipboard.writeText(link);
-            showToast('Verification link copied!');
-        };
-        
-        window.deleteDocument = async function(id) {
-            if (confirm('⚠️ Delete this document permanently?')) {
-                await sbClient.from('documents').delete().eq('doc_id', id);
-                showToast('Document deleted');
-                loadDocuments();
-                updateStats();
-            }
-        };
-        
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function generateDocId() {
-            return 'JAM-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-        }
-        
-        function setupUpload() {
-            document.getElementById('uploadArea').onclick = () => document.getElementById('docFile').click();
-            document.getElementById('uploadBtn').onclick = () => {
-                const title = document.getElementById('docTitle').value;
-                const issueDate = document.getElementById('issueDate').value;
-                const category = document.getElementById('docCategory').value;
-                const description = document.getElementById('docDesc').value;
-                const file = document.getElementById('docFile').files[0];
+            async function loadDocuments() {
+                const { data, error } = await window._sb
+                    .from('documents')
+                    .select('*')
+                    .order('uploaded_at', { ascending: false });
                 
-                if (!title || !issueDate || !file) {
-                    alert('Please fill all fields');
+                const container = document.getElementById('documentsList');
+                
+                if (error) {
+                    container.innerHTML = '<p>Error loading documents: ' + error.message + '</p>';
                     return;
                 }
                 
-                showToast('Uploading to database...');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p>No documents yet. Upload your first document above.</p>';
+                    return;
+                }
                 
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const docId = generateDocId();
+                container.innerHTML = data.map(doc => `
+                    <div class="doc-item">
+                        <div style="flex: 1;">
+                            <strong><i class="fas fa-file-pdf"></i> ${escapeHtml(doc.title)}</strong><br>
+                            <small>ID: ${escapeHtml(doc.doc_id)} | Issued: ${escapeHtml(doc.issue_date)} | Verified: ${doc.verification_count || 0} times</small>
+                        </div>
+                        <div class="doc-actions">
+                            <button onclick="copyLink('${doc.doc_id}')" class="btn-sm"><i class="fas fa-copy"></i> Copy Link</button>
+                            <button onclick="deleteDocument('${doc.doc_id}')" class="btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            async function updateStats() {
+                const { data: docs } = await window._sb.from('documents').select('*');
+                document.getElementById('totalDocs').innerText = docs ? docs.length : 0;
+                
+                const { data: verifications } = await window._sb.from('verifications').select('*');
+                document.getElementById('totalVerifications').innerText = verifications ? verifications.length : 0;
+            }
+            
+            window.copyLink = function(id) {
+                const link = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${id}`;
+                navigator.clipboard.writeText(link);
+                showToast('Verification link copied!');
+            };
+            
+            window.deleteDocument = async function(id) {
+                if (confirm('⚠️ Delete this document permanently?')) {
+                    await window._sb.from('documents').delete().eq('doc_id', id);
+                    showToast('Document deleted');
+                    loadDocuments();
+                    updateStats();
+                }
+            };
+            
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+            
+            function generateDocId() {
+                return 'JAM-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+            }
+            
+            function setupUpload() {
+                document.getElementById('uploadArea').onclick = () => document.getElementById('docFile').click();
+                document.getElementById('uploadBtn').onclick = () => {
+                    const title = document.getElementById('docTitle').value;
+                    const issueDate = document.getElementById('issueDate').value;
+                    const category = document.getElementById('docCategory').value;
+                    const description = document.getElementById('docDesc').value;
+                    const file = document.getElementById('docFile').files[0];
                     
-                    const { error } = await sbClient.from('documents').insert({
-                        doc_id: docId,
-                        title: title,
-                        issue_date: issueDate,
-                        category: category,
-                        description: description,
-                        file_data: e.target.result
-                    });
-                    
-                    if (error) {
-                        showToast('Upload failed: ' + error.message);
-                        console.error('Supabase error:', error);
+                    if (!title || !issueDate || !file) {
+                        alert('Please fill all fields');
                         return;
                     }
                     
-                    // Generate QR Code Document
-                    const tempDiv = document.createElement('div');
-                    const verifyUrl = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${docId}`;
-                    new QRCode(tempDiv, { text: verifyUrl, width: 150, height: 150 });
+                    showToast('Uploading to database...');
                     
-                    setTimeout(() => {
-                        const qrImg = tempDiv.querySelector('img');
-                        const qrHtml = `<!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <title>${title} - Jamuna LTD</title>
-                            <style>
-                                body { font-family: Arial; text-align: center; padding: 50px; }
-                                .header { border-bottom: 3px solid #1a4d8c; margin-bottom: 30px; }
-                                .qr-code { margin: 30px auto; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="header">
-                                <h1>Jamuna LTD</h1>
-                                <p>Paitka, Dhanbari, Tangail</p>
-                                <h2>✅ OFFICIALLY VERIFIED DOCUMENT</h2>
-                            </div>
-                            <h2>${escapeHtml(title)}</h2>
-                            <p><strong>Document ID:</strong> ${docId}</p>
-                            <p><strong>Issue Date:</strong> ${issueDate}</p>
-                            <p><strong>Category:</strong> ${category}</p>
-                            ${description ? `<p><strong>Notes:</strong> ${escapeHtml(description)}</p>` : ''}
-                            <div class="qr-code">
-                                ${qrImg ? `<img src="${qrImg.src}" alt="QR Code">` : '<p>QR Code</p>'}
-                            </div>
-                            <p><strong>Scan QR code or visit:</strong><br>${verifyUrl}</p>
-                            <hr>
-                            <small>This document can be verified at Jamuna LTD official portal</small>
-                        </body>
-                        </html>`;
+                    const reader = new FileReader();
+                    reader.onload = async function(e) {
+                        const docId = generateDocId();
                         
-                        const blob = new Blob([qrHtml], { type: 'text/html' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_JAMUNA_VERIFIED.html`;
-                        a.click();
-                        URL.revokeObjectURL(blob);
+                        const { error } = await window._sb.from('documents').insert({
+                            doc_id: docId,
+                            title: title,
+                            issue_date: issueDate,
+                            category: category,
+                            description: description,
+                            file_data: e.target.result
+                        });
                         
-                        showToast(`✅ Uploaded! ID: ${docId}`);
-                        document.getElementById('docTitle').value = '';
-                        document.getElementById('issueDate').value = '';
-                        document.getElementById('docDesc').value = '';
-                        document.getElementById('docFile').value = '';
+                        if (error) {
+                            showToast('Upload failed: ' + error.message);
+                            return;
+                        }
                         
-                        loadDocuments();
-                        updateStats();
-                    }, 200);
+                        const tempDiv = document.createElement('div');
+                        const verifyUrl = `https://limafiroz99x.github.io/jamunadhaka/index-db.html?doc=${docId}`;
+                        new QRCode(tempDiv, { text: verifyUrl, width: 150, height: 150 });
+                        
+                        setTimeout(() => {
+                            const qrImg = tempDiv.querySelector('img');
+                            const qrHtml = `<!DOCTYPE html>
+                            <html>
+                            <head><meta charset="UTF-8"><title>${title} - Jamuna LTD</title>
+                            <style>body{font-family:Arial;text-align:center;padding:50px;}.header{border-bottom:3px solid #1a4d8c;margin-bottom:30px;}.qr-code{margin:30px auto;}</style>
+                            </head>
+                            <body>
+                                <div class="header"><h1>Jamuna LTD</h1><p>Paitka, Dhanbari, Tangail</p><h2>✅ OFFICIALLY VERIFIED DOCUMENT</h2></div>
+                                <h2>${escapeHtml(title)}</h2>
+                                <p><strong>Document ID:</strong> ${docId}</p>
+                                <p><strong>Issue Date:</strong> ${issueDate}</p>
+                                <p><strong>Category:</strong> ${category}</p>
+                                ${description ? `<p><strong>Notes:</strong> ${escapeHtml(description)}</p>` : ''}
+                                <div class="qr-code">${qrImg ? `<img src="${qrImg.src}" alt="QR Code">` : '<p>QR Code</p>'}</div>
+                                <p><strong>Scan QR code or visit:</strong><br>${verifyUrl}</p>
+                                <hr><small>This document can be verified at Jamuna LTD official portal</small>
+                            </body>
+                            </html>`;
+                            
+                            const blob = new Blob([qrHtml], { type: 'text/html' });
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = `${title.replace(/[^a-z0-9]/gi, '_')}_JAMUNA_VERIFIED.html`;
+                            a.click();
+                            URL.revokeObjectURL(blob);
+                            
+                            showToast(`✅ Uploaded! ID: ${docId}`);
+                            document.getElementById('docTitle').value = '';
+                            document.getElementById('issueDate').value = '';
+                            document.getElementById('docDesc').value = '';
+                            document.getElementById('docFile').value = '';
+                            
+                            loadDocuments();
+                            updateStats();
+                        }, 200);
+                    };
+                    reader.readAsDataURL(file);
                 };
-                reader.readAsDataURL(file);
-            };
-        }
-        
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;');
-            });
-        }
+            }
+            
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;');
+                });
+            }
+            
+            document.getElementById('loginButton').onclick = () => window.doLogin();
+            document.getElementById('logoutButton').onclick = () => window.doLogout();
+            document.getElementById('passwordInput').onkeypress = (e) => { if (e.key === 'Enter') window.doLogin(); };
+        })();
     </script>
 </body>
 </html>
