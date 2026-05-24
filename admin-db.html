@@ -192,12 +192,12 @@
 
     <script>
         // ============================================
-        // SUPABASE CONFIGURATION
+        // SUPABASE CONFIGURATION - FIXED (no duplicate)
         // ============================================
-        const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
+        const SB_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+        const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
         
-        const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sbClient = supabaseJs.createClient(SB_URL, SB_ANON_KEY);
         
         // ============================================
         // LOGIN FUNCTIONS
@@ -230,7 +230,7 @@
         // DATABASE FUNCTIONS
         // ============================================
         async function loadDocuments() {
-            const { data, error } = await supabase
+            const { data, error } = await sbClient
                 .from('documents')
                 .select('*')
                 .order('uploaded_at', { ascending: false });
@@ -254,7 +254,7 @@
                         <small>ID: ${escapeHtml(doc.doc_id)} | Issued: ${escapeHtml(doc.issue_date)} | Verified: ${doc.verification_count || 0} times</small>
                     </div>
                     <div class="doc-actions">
-                        <button onclick="copyLink('${doc.doc_id}')" class="btn-sm"><i class="fas fa-copy"></i> Link</button>
+                        <button onclick="copyLink('${doc.doc_id}')" class="btn-sm"><i class="fas fa-copy"></i> Copy Link</button>
                         <button onclick="deleteDocument('${doc.doc_id}')" class="btn-danger"><i class="fas fa-trash"></i> Delete</button>
                     </div>
                 </div>
@@ -262,10 +262,10 @@
         }
         
         async function updateStats() {
-            const { data: docs } = await supabase.from('documents').select('*');
+            const { data: docs } = await sbClient.from('documents').select('*');
             document.getElementById('totalDocs').innerText = docs ? docs.length : 0;
             
-            const { data: verifications } = await supabase.from('verifications').select('*');
+            const { data: verifications } = await sbClient.from('verifications').select('*');
             document.getElementById('totalVerifications').innerText = verifications ? verifications.length : 0;
         }
         
@@ -277,7 +277,7 @@
         
         window.deleteDocument = async function(id) {
             if (confirm('⚠️ Delete this document permanently?')) {
-                await supabase.from('documents').delete().eq('doc_id', id);
+                await sbClient.from('documents').delete().eq('doc_id', id);
                 showToast('Document deleted');
                 loadDocuments();
                 updateStats();
@@ -316,7 +316,7 @@
                 reader.onload = async function(e) {
                     const docId = generateDocId();
                     
-                    const { error } = await supabase.from('documents').insert({
+                    const { error } = await sbClient.from('documents').insert({
                         doc_id: docId,
                         title: title,
                         issue_date: issueDate,
