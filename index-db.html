@@ -137,10 +137,10 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
+        const SB_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+        const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
         
-        const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sbClient = supabaseJs.createClient(SB_URL, SB_ANON_KEY);
         
         function getFilePreview(fileData) {
             if (!fileData) return '<div class="loading">Loading...</div>';
@@ -156,7 +156,7 @@
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Verifying...</div>';
             
-            const { data, error } = await supabase
+            const { data, error } = await sbClient
                 .from('documents')
                 .select('*')
                 .eq('doc_id', docId)
@@ -167,14 +167,12 @@
                 return;
             }
             
-            // Update verification count
-            await supabase
+            await sbClient
                 .from('documents')
                 .update({ verification_count: (data.verification_count || 0) + 1 })
                 .eq('doc_id', docId);
             
-            // Log verification
-            await supabase
+            await sbClient
                 .from('verifications')
                 .insert([{ doc_id: docId, ip_address: 'web' }]);
             
