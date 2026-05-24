@@ -137,87 +137,83 @@
     </div>
 
     <script>
-        const SB_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
-        const SB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
-        
-        const sbClient = supabaseJs.createClient(SB_URL, SB_ANON_KEY);
-        
-        function getFilePreview(fileData) {
-            if (!fileData) return '<div class="loading">Loading...</div>';
-            if (fileData.startsWith('data:image')) {
-                return `<img src="${fileData}" alt="Document">`;
-            } else if (fileData.startsWith('data:application/pdf')) {
-                return `<iframe src="${fileData}"></iframe>`;
-            }
-            return `<a href="${fileData}" download>Download to view</a>`;
-        }
-        
-        async function verifyDocument(docId) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Verifying...</div>';
+        (function() {
+            const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
             
-            const { data, error } = await sbClient
-                .from('documents')
-                .select('*')
-                .eq('doc_id', docId)
-                .single();
+            const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            if (error || !data) {
-                resultDiv.innerHTML = '<div style="background:#fee;color:#e74c3c;padding:20px;border-radius:12px;">❌ Invalid Document ID</div>';
-                return;
+            function getFilePreview(fileData) {
+                if (!fileData) return '<div class="loading">Loading...</div>';
+                if (fileData.startsWith('data:image')) {
+                    return `<img src="${fileData}" alt="Document">`;
+                } else if (fileData.startsWith('data:application/pdf')) {
+                    return `<iframe src="${fileData}"></iframe>`;
+                }
+                return `<a href="${fileData}" download>Download to view</a>`;
             }
             
-            await sbClient
-                .from('documents')
-                .update({ verification_count: (data.verification_count || 0) + 1 })
-                .eq('doc_id', docId);
+            window.verifyDocument = async function(docId) {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Verifying...</div>';
+                
+                const { data, error } = await sb
+                    .from('documents')
+                    .select('*')
+                    .eq('doc_id', docId)
+                    .single();
+                
+                if (error || !data) {
+                    resultDiv.innerHTML = '<div style="background:#fee;color:#e74c3c;padding:20px;border-radius:12px;">❌ Invalid Document ID</div>';
+                    return;
+                }
+                
+                await sb.from('documents').update({ verification_count: (data.verification_count || 0) + 1 }).eq('doc_id', docId);
+                await sb.from('verifications').insert([{ doc_id: docId, ip_address: 'web' }]);
+                
+                resultDiv.innerHTML = `
+                    <div class="document-viewer">
+                        <div class="verified-badge"><i class="fas fa-check-circle"></i> OFFICIALLY VERIFIED</div>
+                        <h2 class="doc-title">${escapeHtml(data.title)}</h2>
+                        <div class="doc-details">
+                            <div class="detail-item"><i class="fas fa-qrcode"></i> <strong>ID:</strong> ${escapeHtml(data.doc_id)}</div>
+                            <div class="detail-item"><i class="fas fa-calendar"></i> <strong>Issue Date:</strong> ${escapeHtml(data.issue_date)}</div>
+                            <div class="detail-item"><i class="fas fa-building"></i> <strong>Issued By:</strong> Jamuna LTD</div>
+                            <div class="detail-item"><i class="fas fa-clock"></i> <strong>Verified:</strong> ${new Date().toLocaleString()}</div>
+                        </div>
+                        ${data.description ? `<div style="background:#f0f7ff;padding:15px;border-radius:12px;margin:15px 0;">${escapeHtml(data.description)}</div>` : ''}
+                        <div class="document-preview">
+                            <div class="preview-header">Document Preview</div>
+                            <div class="preview-content">${getFilePreview(data.file_data)}</div>
+                        </div>
+                        <div style="display:flex;gap:15px;justify-content:center;margin-top:20px;">
+                            <a href="${data.file_data}" download style="padding:12px 24px;background:#27ae60;color:white;text-decoration:none;border-radius:8px;"><i class="fas fa-download"></i> Download</a>
+                            <button onclick="window.print()" style="padding:12px 24px;background:#7f8c8d;color:white;border:none;border-radius:8px;">Print</button>
+                        </div>
+                    </div>
+                `;
+            };
             
-            await sbClient
-                .from('verifications')
-                .insert([{ doc_id: docId, ip_address: 'web' }]);
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;');
+                });
+            }
             
-            resultDiv.innerHTML = `
-                <div class="document-viewer">
-                    <div class="verified-badge"><i class="fas fa-check-circle"></i> OFFICIALLY VERIFIED</div>
-                    <h2 class="doc-title">${escapeHtml(data.title)}</h2>
-                    <div class="doc-details">
-                        <div class="detail-item"><i class="fas fa-qrcode"></i> <strong>ID:</strong> ${escapeHtml(data.doc_id)}</div>
-                        <div class="detail-item"><i class="fas fa-calendar"></i> <strong>Issue Date:</strong> ${escapeHtml(data.issue_date)}</div>
-                        <div class="detail-item"><i class="fas fa-building"></i> <strong>Issued By:</strong> Jamuna LTD</div>
-                        <div class="detail-item"><i class="fas fa-clock"></i> <strong>Verified:</strong> ${new Date().toLocaleString()}</div>
-                    </div>
-                    ${data.description ? `<div style="background:#f0f7ff;padding:15px;border-radius:12px;margin:15px 0;">${escapeHtml(data.description)}</div>` : ''}
-                    <div class="document-preview">
-                        <div class="preview-header">Document Preview</div>
-                        <div class="preview-content">${getFilePreview(data.file_data)}</div>
-                    </div>
-                    <div style="display:flex;gap:15px;justify-content:center;margin-top:20px;">
-                        <a href="${data.file_data}" download style="padding:12px 24px;background:#27ae60;color:white;text-decoration:none;border-radius:8px;"><i class="fas fa-download"></i> Download</a>
-                        <button onclick="window.print()" style="padding:12px 24px;background:#7f8c8d;color:white;border:none;border-radius:8px;">Print</button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;');
-            });
-        }
-        
-        document.getElementById('verifyBtn').onclick = () => {
-            const docId = document.getElementById('docIdInput').value.trim();
-            if (docId) verifyDocument(docId);
-            else alert('Enter Document ID');
-        };
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const docIdFromQR = urlParams.get('doc');
-        if (docIdFromQR) {
-            document.getElementById('docIdInput').value = docIdFromQR;
-            verifyDocument(docIdFromQR);
-        }
+            document.getElementById('verifyBtn').onclick = () => {
+                const docId = document.getElementById('docIdInput').value.trim();
+                if (docId) window.verifyDocument(docId);
+                else alert('Enter Document ID');
+            };
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const docIdFromQR = urlParams.get('doc');
+            if (docIdFromQR) {
+                document.getElementById('docIdInput').value = docIdFromQR;
+                window.verifyDocument(docIdFromQR);
+            }
+        })();
     </script>
 </body>
 </html>
