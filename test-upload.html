@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Test Supabase Upload</h1>
+    <input type="text" id="title" placeholder="Title">
+    <input type="date" id="date">
+    <input type="file" id="file">
+    <button onclick="upload()">Upload</button>
+    <pre id="result"></pre>
+
+    <script>
+        const SUPABASE_URL = 'https://bxvpqjyxffwurosscbsw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4dnBxanl4ZmZ3dXJvc3NjYnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MDY3OTYsImV4cCI6MjA5NTE4Mjc5Nn0.riUBTCg2s_dL1ugshVRHwraFFzGjpJ9xBczAefcp9u8';
+        const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        async function upload() {
+            const title = document.getElementById('title').value;
+            const issueDate = document.getElementById('date').value;
+            const file = document.getElementById('file').files[0];
+            
+            if (!title || !issueDate || !file) {
+                document.getElementById('result').innerText = 'Please fill all fields';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const docId = 'TEST-' + Date.now();
+                
+                const { data, error } = await supabase.from('documents').insert([{
+                    doc_id: docId,
+                    title: title,
+                    issue_date: issueDate,
+                    category: 'Test',
+                    description: 'Test upload',
+                    file_data: e.target.result
+                }]);
+                
+                if (error) {
+                    document.getElementById('result').innerText = 'ERROR: ' + JSON.stringify(error, null, 2);
+                } else {
+                    document.getElementById('result').innerText = 'SUCCESS! Document ID: ' + docId;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
